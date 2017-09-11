@@ -1,4 +1,3 @@
-import * as libCrypto from "crypto";
 import * as zipkin from "zipkin";
 import * as grpc from "grpc";
 import {MiddlewareNext, RpcContext, RpcMiddleware, GatewayContext} from "sasdn";
@@ -24,7 +23,6 @@ export class GrpcInstrumentation {
         }
 
         return async (ctx: RpcContext, next: MiddlewareNext) => {
-            const reqId = libCrypto.randomBytes(12).toString('base64');
             const metadata = ctx.call.metadata as grpc.Metadata;
 
             function readMetadata(headerName: string) {
@@ -83,8 +81,7 @@ export class GrpcInstrumentation {
                 }
             });
 
-            ctx['reqId'] = reqId;
-            ctx['traceId'] = traceId;
+            ctx[zipkin.HttpHeaders.TraceId] = traceId;
 
             await next();
 
@@ -104,8 +101,8 @@ export class GrpcInstrumentation {
             return client;
         }
 
-        if (ctx['traceId'] instanceof zipkin.TraceId) {
-            tracer.setId(ctx['traceId']);
+        if (ctx[zipkin.HttpHeaders.TraceId] instanceof zipkin.TraceId) {
+            tracer.setId(ctx[zipkin.HttpHeaders.TraceId]);
         }
 
         Object.getOwnPropertyNames(Object.getPrototypeOf(client)).forEach((property) => {

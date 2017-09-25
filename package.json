@@ -1,6 +1,6 @@
 {
   "name": "zipkin-instrumentation-grpc",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "SASDN grpc middleware for instrumentation with Zipkin.js",
   "main": "lib/index.js",
   "author": "fengjie <https://github.com/niklaus0823>",

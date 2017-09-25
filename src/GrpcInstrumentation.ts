@@ -1,6 +1,7 @@
 import * as zipkin from "zipkin";
 import * as grpc from "grpc";
 import {MiddlewareNext, RpcContext, RpcMiddleware, GatewayContext} from "sasdn";
+import * as lib from './lib/lib';
 
 export interface MiddlewareOptions {
     tracer: zipkin.Tracer;
@@ -26,7 +27,7 @@ export class GrpcInstrumentation {
             const metadata = ctx.call.metadata as grpc.Metadata;
 
             function readMetadata(headerName: string) {
-                const val = metadata.get(headerName.toLowerCase())[0];
+                const val = lib.getMetadataValue(metadata, headerName)[0];
                 if (val !== undefined) {
                     return new zipkin.option.Some(val);
                 } else {
@@ -34,21 +35,21 @@ export class GrpcInstrumentation {
                 }
             }
 
-            if (GrpcInstrumentation._containsIncomingMetadata(metadata)) {
+            if (lib.containsIncomingMetadata(metadata)) {
                 const spanId = readMetadata(zipkin.HttpHeaders.SpanId);
                 spanId.ifPresent((sid: zipkin.spanId) => {
                     const childId = new zipkin.TraceId({
                         traceId: readMetadata(zipkin.HttpHeaders.TraceId),
                         parentId: readMetadata(zipkin.HttpHeaders.ParentSpanId),
                         spanId: sid,
-                        sampled: readMetadata(zipkin.HttpHeaders.Sampled).map(GrpcInstrumentation._stringToBoolean),
-                        flags: readMetadata(zipkin.HttpHeaders.Flags).flatMap(GrpcInstrumentation._stringToIntOption).getOrElse(0)
+                        sampled: readMetadata(zipkin.HttpHeaders.Sampled).map(lib.stringToBoolean),
+                        flags: readMetadata(zipkin.HttpHeaders.Flags).flatMap(lib.stringToIntOption).getOrElse(0)
                     });
                     tracer.setId(childId);
                 });
             } else {
                 const rootId = tracer.createRootId();
-                if (metadata.get(zipkin.HttpHeaders.Flags.toLowerCase())[0]) {
+                if (lib.getMetadataValue(metadata, zipkin.HttpHeaders.Flags)[0]) {
                     const rootIdWithFlags = new zipkin.TraceId({
                         traceId: rootId.traceId,
                         parentId: rootId.parentId,
@@ -119,8 +120,8 @@ export class GrpcInstrumentation {
                     tracer.setId(tracer.createChildId());
                     const traceId = tracer.id;
 
-                    const metadata = GrpcInstrumentation._makeMetadata(traceId);
-                    const argus = GrpcInstrumentation._replaceArguments(arguments, metadata, (callback) => {
+                    const metadata = lib.makeMetadata(traceId);
+                    const argus = lib.replaceArguments(arguments, metadata, (callback) => {
                         return (err, res) => {
                             tracer.scoped(() => {
                                 tracer.setId(traceId);
@@ -158,55 +159,5 @@ export class GrpcInstrumentation {
         });
 
         return client;
-    }
-
-    private static _containsIncomingMetadata(metadata: grpc.Metadata): boolean {
-        return metadata.get(zipkin.HttpHeaders.TraceId.toLowerCase())[0] !== undefined && metadata.get(zipkin.HttpHeaders.SpanId.toLowerCase())[0] !== undefined;
-    }
-
-    private static _stringToBoolean(str: string): boolean {
-        return str === '1';
-    }
-
-    private static _stringToIntOption(str: string): any {
-        try {
-            return new zipkin.option.Some(parseInt(str));
-        } catch (err) {
-            return zipkin.option.None;
-        }
-    }
-
-    private static _makeMetadata(traceId: zipkin.TraceId): grpc.Metadata {
-        const metadata = new grpc.Metadata();
-        metadata.add(zipkin.HttpHeaders.TraceId, traceId.traceId);
-        metadata.add(zipkin.HttpHeaders.ParentSpanId, traceId.parentId);
-        metadata.add(zipkin.HttpHeaders.SpanId, traceId.spanId);
-        metadata.add(zipkin.HttpHeaders.Sampled, traceId.sampled.getOrElse() ? '1' : '0');
-        return metadata;
-    }
-
-    private static _replaceArguments(argus: IArguments, metadata: grpc.Metadata, callback: Function): IArguments {
-        let i = 0;
-        if (argus.length == 0) {
-            argus[i] = metadata;
-            argus.length++;
-        } else {
-            const oldArguments = Object.assign({}, argus);
-            for (let key in oldArguments) {
-                if (typeof oldArguments[key] == 'function') {
-                    argus[i] = callback(oldArguments[key]);
-                } else {
-                    argus[i] = oldArguments[key];
-                }
-                if (parseInt(key) == 0) {
-                    i++;
-                    argus[i] = metadata;
-                    argus.length++;
-                }
-                i++;
-            }
-        }
-
-        return argus;
     }
 }

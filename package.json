@@ -1,6 +1,6 @@
 {
   "name": "zipkin-instrumentation-grpcjs",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "SASDN grpc middleware for instrumentation with Zipkin.js",
   "main": "lib/index.js",
   "author": "Jonathan Dai <https://github.com/agreatfool>",

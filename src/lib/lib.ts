@@ -1,9 +1,9 @@
 import * as zipkin from "zipkin";
 import * as grpc from "grpc";
-import {MiddlewareNext, RpcContext, RpcMiddleware, GatewayContext} from "sasdn";
 
 export function getMetadataValue(metadata: grpc.Metadata, headerName: string): Array<string> {
-    return metadata.get.header[headerName.toLowerCase()];
+    // metadata.get() 方法本身就是不区分大小写的，eg：X-B3-TraceId 和 x-b3-traceid 可以获取相同的数据
+    return metadata.get(headerName);
 }
 
 export function containsIncomingMetadata(metadata: grpc.Metadata): boolean {

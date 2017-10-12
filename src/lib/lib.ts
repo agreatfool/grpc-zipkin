@@ -1,9 +1,17 @@
 import * as zipkin from "zipkin";
 import * as grpc from "grpc";
-import {MiddlewareNext, RpcContext, RpcMiddleware, GatewayContext} from "sasdn";
 
 export function getMetadataValue(metadata: grpc.Metadata, headerName: string): Array<string> {
-    return metadata.get.header[headerName.toLowerCase()];
+    if (metadata.get(headerName) !== undefined) {
+        return metadata.get(headerName);
+    }
+    if (metadata.get(headerName.toLowerCase()) !== undefined) {
+        return metadata.get(headerName.toLowerCase());
+    }
+    if (metadata.get(headerName.toUpperCase()) !== undefined) {
+        return metadata.get(headerName.toUpperCase());
+    }
+    return null;
 }
 
 export function containsIncomingMetadata(metadata: grpc.Metadata): boolean {

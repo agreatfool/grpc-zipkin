@@ -1,6 +1,6 @@
-import * as zipkin from "zipkin";
-import * as grpc from "grpc";
-import {MiddlewareNext, RpcContext, RpcMiddleware, GatewayContext} from "sasdn";
+import * as zipkin from 'zipkin';
+import * as grpc from 'grpc';
+import {MiddlewareNext, RpcContext, RpcMiddleware, GatewayContext} from 'sasdn';
 import * as lib from './lib/lib';
 
 export interface MiddlewareOptions {
@@ -13,8 +13,8 @@ export interface MiddlewareOptions {
 export class GrpcInstrumentation {
     public static middleware(options: MiddlewareOptions): RpcMiddleware {
         const tracer = options.tracer;
-        const serviceName = options.serviceName || "unknown";
-        const remoteServiceName = options.remoteServiceName || "unknown";
+        const serviceName = options.serviceName || 'unknown';
+        const remoteServiceName = options.remoteServiceName || 'unknown';
         const port = options.port || 0;
 
         if (tracer === false) {
@@ -95,14 +95,16 @@ export class GrpcInstrumentation {
 
     public static proxyClient<T>(client: T, ctx: GatewayContext | RpcContext, options: MiddlewareOptions): T {
         const tracer = options.tracer;
-        const serviceName = options.serviceName || "unknown";
+        const serviceName = options.serviceName || 'unknown';
         const port = options.port || 0;
 
         if (tracer === false) {
             return client;
         }
 
-        if (ctx[zipkin.HttpHeaders.TraceId] instanceof zipkin.TraceId) {
+        if (ctx
+            && ctx.hasOwnProperty(zipkin.HttpHeaders.TraceId)
+            && ctx[zipkin.HttpHeaders.TraceId] instanceof zipkin.TraceId) {
             tracer.setId(ctx[zipkin.HttpHeaders.TraceId]);
         }
 

@@ -127,7 +127,8 @@ export class GrpcInstrumentation {
                         return (err, res) => {
                             tracer.scoped(() => {
                                 tracer.setId(traceId);
-                                tracer.recordBinary('rpc.end', 'callback');
+                                tracer.recordBinary('rpc_end', (err) ? `Error` : `Callback end`);
+                                tracer.recordBinary('rpc_end_response', JSON.stringify((err) ? err : res));
                                 tracer.recordAnnotation(new zipkin.Annotation.ClientRecv());
                             });
                             callback(err, res);
@@ -137,7 +138,8 @@ export class GrpcInstrumentation {
                     tracer.scoped(() => {
                         tracer.recordServiceName(serviceName);
                         tracer.recordRpc(`rpc`);
-                        tracer.recordBinary('rpc.query', property);
+                        tracer.recordBinary('rpc_query', property);
+                        tracer.recordBinary('rpc_query_params', JSON.stringify(arguments));
                         tracer.recordAnnotation(new zipkin.Annotation.ClientSend());
                         tracer.recordAnnotation(new zipkin.Annotation.LocalAddr({port}));
 
@@ -150,7 +152,7 @@ export class GrpcInstrumentation {
                     call.on('end', function () {
                         tracer.scoped(() => {
                             tracer.setId(traceId);
-                            tracer.recordBinary('rpc.end', 'call');
+                            tracer.recordBinary('rpc_end', `Call end`);
                             tracer.recordAnnotation(new zipkin.Annotation.ClientRecv());
                         });
                     });
